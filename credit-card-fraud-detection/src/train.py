@@ -1,4 +1,3 @@
-import numpy as np
 import joblib
 from pathlib import Path
 
@@ -36,13 +35,11 @@ def train_random_forest(X_train, y_train) -> RandomForestClassifier:
 
 
 def train_xgboost(X_train, y_train, tune: bool = True) -> XGBClassifier:
-    # scale_pos_weight balances classes without SMOTE when tune=False
     neg = (y_train == 0).sum()
     pos = (y_train == 1).sum()
-    spw = neg / pos
 
     base_params = dict(
-        scale_pos_weight=spw,
+        scale_pos_weight=neg / pos,
         eval_metric="aucpr",
         random_state=42,
         n_jobs=-1,

@@ -17,7 +17,6 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 
 def find_optimal_threshold(y_true, y_proba) -> float:
-    """F1-maximising threshold on the PR curve."""
     precisions, recalls, thresholds = precision_recall_curve(y_true, y_proba)
     f1s = 2 * precisions * recalls / (precisions + recalls + 1e-9)
     return thresholds[np.argmax(f1s[:-1])]
@@ -39,8 +38,36 @@ def evaluate_model(model, X_test, y_test, name: str) -> dict:
     print(f"  F1     : {f1:.4f}")
     print(classification_report(y_test, y_pred, target_names=["Legit", "Fraud"]))
 
-    return {"name": name, "pr_auc": pr_auc, "roc_auc": roc_auc, "f1": f1,
-            "threshold": threshold, "y_proba": y_proba, "y_pred": y_pred}
+    return {
+        "name": name,
+        "pr_auc": pr_auc,
+        "roc_auc": roc_auc,
+        "f1": f1,
+        "threshold": threshold,
+        "y_proba": y_proba,
+        "y_pred": y_pred,
+    }
+
+
+def plot_threshold_analysis(result: dict, y_test):
+    """Precision/recall tradeoff across thresholds for a single model."""
+    precisions, recalls, thresholds = precision_recall_curve(y_test, result["y_proba"])
+    f1s = 2 * precisions * recalls / (precisions + recalls + 1e-9)
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.plot(thresholds, precisions[:-1], label="Precision")
+    ax.plot(thresholds, recalls[:-1], label="Recall")
+    ax.plot(thresholds, f1s[:-1], label="F1", linestyle="--")
+    ax.axvline(result["threshold"], color="red", linewidth=0.8, label=f"Chosen threshold ({result['threshold']:.3f})")
+    ax.set_xlabel("Decision threshold")
+    ax.set_title(f"Threshold analysis — {result['name']}")
+    ax.legend()
+    plt.tight_layout()
+    name_slug = result["name"].replace(" ", "_").lower()
+    path = RESULTS_DIR / f"threshold_{name_slug}.png"
+    plt.savefig(path, dpi=150)
+    print(f"Saved threshold plot → {path}")
+    plt.close()
 
 
 def plot_pr_curves(results: list, y_test):
@@ -79,7 +106,7 @@ def plot_roc_curves(results: list, y_test):
 def plot_confusion_matrix(y_test, y_pred, name: str):
     cm = confusion_matrix(y_test, y_pred)
     fig, ax = plt.subplots(figsize=(5, 4))
-    im = ax.imshow(cm, cmap="Blues")
+    ax.imshow(cm, cmap="Blues")
     ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
     ax.set_xticklabels(["Legit", "Fraud"]); ax.set_yticklabels(["Legit", "Fraud"])
     ax.set_xlabel("Predicted"); ax.set_ylabel("Actual")
