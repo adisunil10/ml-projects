@@ -6,3 +6,6 @@ imbalanced-learn
 matplotlib
 seaborn
 jupyter
+fastapi
+uvicorn
+pydantic

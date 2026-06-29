@@ -1,6 +1,6 @@
 # Credit Card Fraud Detection
 
-Binary classification pipeline on 284k real transactions (0.17% fraud rate). The main challenge is class imbalance — standard accuracy is useless here, so the focus is on PR-AUC and recall on the minority class.
+Binary classification pipeline on 284k real transactions (0.17% fraud rate). Built around three core challenges: class imbalance, choosing the right evaluation metric, and optimising for business cost rather than model accuracy.
 
 **Dataset:** [Kaggle — Credit Card Fraud Detection](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud)
 
@@ -12,7 +12,7 @@ Binary classification pipeline on 284k real transactions (0.17% fraud rate). The
 | Random Forest | 0.870 | 0.982 | 0.856 |
 | XGBoost (tuned) | **0.876** | 0.979 | **0.867** |
 
-XGBoost with SMOTE oversampling and RandomizedSearchCV tuning achieves 0.876 PR-AUC, catching 80% of fraud cases with 95% precision.
+XGBoost with SMOTE + RandomizedSearchCV tuning. Threshold selected by minimising total dollar cost (FN = $88 avg transaction absorbed, FP = $10 declined legit card) rather than maximising F1.
 
 ## Setup
 
@@ -20,25 +20,51 @@ XGBoost with SMOTE oversampling and RandomizedSearchCV tuning achieves 0.876 PR-
 pip install -r requirements.txt
 ```
 
-Place `creditcard.csv` in `data/` then run:
+Place `creditcard.csv` in `data/`, then run the full pipeline:
 
 ```bash
 python src/pipeline.py
 ```
 
-Plots and confusion matrices are saved to `results/`.
+## API
+
+Start the prediction server:
+
+```bash
+uvicorn api.main:app --reload
+```
+
+Score a transaction:
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"Time": 406, "Amount": 149.62, "V1": -1.36, "V2": -0.07, ...}'
+```
+
+Returns:
+```json
+{
+  "fraud_probability": 0.9821,
+  "prediction": "fraud",
+  "threshold": 0.963
+}
+```
 
 ## Structure
 
 ```
 src/
-├── preprocess.py   # scaling, stratified split
-├── features.py     # engineered features (log amount, hour, V interactions)
-├── train.py        # LR, RF, XGBoost + SMOTE + hyperparameter search
-├── evaluate.py     # PR-AUC, ROC-AUC, threshold selection, plots
-└── pipeline.py     # runs everything end to end
+├── preprocess.py     # scaling, stratified split
+├── features.py       # log amount, hour-of-day, V interactions, velocity features
+├── train.py          # LR, RF, XGBoost + SMOTE + hyperparameter search
+├── evaluate.py       # PR-AUC, ROC-AUC, threshold selection, plots
+├── cost_analysis.py  # dollar cost curve, cost-minimising threshold
+└── pipeline.py       # runs everything end to end
+api/
+└── main.py           # FastAPI /predict endpoint
 notebooks/
-└── 01_eda.ipynb    # class distribution, feature distributions, correlation
+└── 01_eda.ipynb      # class distribution, feature distributions, correlation
 results/
-└── summary.md      # findings and model comparison
+└── summary.md        # findings and model comparison
 ```
