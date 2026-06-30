@@ -18,7 +18,7 @@ def apply_smote(X_train, y_train, random_state: int = 42):
 
 
 def train_logistic_regression(X_train, y_train) -> LogisticRegression:
-    model = LogisticRegression(class_weight="balanced", max_iter=1000, random_state=42)
+    model = LogisticRegression(class_weight="balanced", max_iter=2000, solver="saga", random_state=42)
     model.fit(X_train, y_train)
     return model
 

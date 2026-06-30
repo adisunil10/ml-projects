@@ -35,22 +35,26 @@ def add_amount_deviation(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_velocity_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Rolling transaction count and spend over a 1-hour window, ordered by Time.
+    Rolling 1-hour transaction count and spend, ordered by Time.
     Without card IDs (anonymised dataset) this is population-level, not per-card —
     it still captures fraud clusters that tend to spike in short windows.
     """
-    df = df.copy().sort_values("Time").reset_index(drop=True)
-    window = 3600  # seconds
+    original_index = df.index
+    df = df.copy().sort_values("Time")
 
-    counts, amounts = [], []
-    for i, t in enumerate(df["Time"]):
-        window_mask = (df["Time"] >= t - window) & (df["Time"] < t)
-        counts.append(window_mask.sum())
-        amounts.append(df.loc[window_mask, "Amount"].sum())
+    times = df["Time"].values
+    amts = df["Amount"].values
+    window = 3600
 
-    df["velocity_count_1h"] = counts
-    df["velocity_amount_1h"] = amounts
-    return df
+    # searchsorted is O(n log n) vs the naive O(n^2) loop
+    left = np.searchsorted(times, times - window, side="left")
+    right = np.arange(len(times))
+
+    df["velocity_count_1h"] = right - left
+    df["velocity_amount_1h"] = np.array([amts[l:r].sum() for l, r in zip(left, right)])
+
+    # Restore original index so alignment with y is preserved after the sort
+    return df.reindex(original_index)
 
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
