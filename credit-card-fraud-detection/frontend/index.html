@@ -265,7 +265,9 @@
 <footer>Model: XGBoost &nbsp;|&nbsp; Threshold: cost-optimised at 0.782 &nbsp;|&nbsp; PR-AUC: 0.877</footer>
 
 <script>
-  const API = "http://localhost:8000/predict";
+  const API = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000/predict"
+    : `${window.location.origin}/predict`;
 
   // Inject V1–V28 fields
   const grid = document.querySelector(".fields-grid");
