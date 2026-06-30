@@ -11,10 +11,13 @@ from cost_analysis import plot_cost_curve
 DATA_PATH = Path(__file__).parent.parent / "data" / "creditcard.csv"
 MODELS_DIR = Path(__file__).parent.parent / "models"
 
+# Velocity features require per-card history unavailable at single-transaction inference.
+# Dropping them from model training avoids a train/inference distribution mismatch.
+DROP_FOR_MODEL = ["velocity_count_1h", "velocity_amount_1h"]
+
 
 def main():
     print("Loading data...")
-    # Compute hour stats on full training set before splitting, then save for inference
     raw = scale_features(load_data(str(DATA_PATH)))
     raw_featured = engineer_features(raw.drop(columns=["Class"]))
     hour_stats = compute_hour_stats(raw_featured)
@@ -25,8 +28,8 @@ def main():
     X_train, X_test, y_train, y_test = load_and_prepare(str(DATA_PATH))
 
     print("Engineering features...")
-    X_train = engineer_features(X_train)
-    X_test = engineer_features(X_test)
+    X_train = engineer_features(X_train).drop(columns=DROP_FOR_MODEL)
+    X_test = engineer_features(X_test).drop(columns=DROP_FOR_MODEL)
 
     print(f"Train: {X_train.shape}  fraud rate={y_train.mean():.4f}")
     print(f"Test : {X_test.shape}  fraud rate={y_test.mean():.4f}")

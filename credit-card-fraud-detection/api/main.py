@@ -59,11 +59,6 @@ def build_features(txn: Transaction) -> np.ndarray:
     h_std = hour_stats["amount_std"].get(str(hour), 1.0) or 1.0
     amount_z = (t.Amount - h_mean) / h_std
 
-    # Velocity features require per-card history unavailable at single-transaction inference.
-    # In production these would come from a feature store.
-    velocity_count = 0.0
-    velocity_amount = 0.0
-
     return np.array([[
         t.Time, t.Amount,
         t.V1, t.V2, t.V3, t.V4, t.V5, t.V6, t.V7, t.V8, t.V9, t.V10,
@@ -72,7 +67,6 @@ def build_features(txn: Transaction) -> np.ndarray:
         amount_log, hour, day,
         t.V1 * t.V2, t.V3 * t.V4, t.V1 * t.V3,
         amount_z,
-        velocity_count, velocity_amount,
     ]])
 
 
