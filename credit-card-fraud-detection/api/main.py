@@ -59,12 +59,13 @@ def build_features(txn: Transaction) -> np.ndarray:
     h_std = hour_stats["amount_std"].get(str(hour), 1.0) or 1.0
     amount_z = (t.Amount - h_mean) / h_std
 
+    # Order must match model.feature_names_in_ exactly
     return np.array([[
-        t.Time, t.Amount,
+        t.Time,
         t.V1, t.V2, t.V3, t.V4, t.V5, t.V6, t.V7, t.V8, t.V9, t.V10,
         t.V11, t.V12, t.V13, t.V14, t.V15, t.V16, t.V17, t.V18, t.V19, t.V20,
         t.V21, t.V22, t.V23, t.V24, t.V25, t.V26, t.V27, t.V28,
-        amount_log, hour, day,
+        t.Amount, amount_log, hour, day,
         t.V1 * t.V2, t.V3 * t.V4, t.V1 * t.V3,
         amount_z,
     ]])
