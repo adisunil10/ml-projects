@@ -11,6 +11,8 @@ import numpy as np
 import joblib
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).parent.parent
@@ -19,12 +21,21 @@ HOUR_STATS_PATH = BASE_DIR / "models" / "hour_stats.json"
 
 app = FastAPI(title="Fraud Detection API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/app", StaticFiles(directory=str(BASE_DIR / "frontend"), html=True), name="frontend")
+
 model = joblib.load(MODEL_PATH)
 with open(HOUR_STATS_PATH) as f:
     hour_stats = json.load(f)
 
-# Threshold from cost-minimisation analysis (run pipeline.py to update)
-DECISION_THRESHOLD = 0.963
+# Threshold from cost-minimisation analysis
+DECISION_THRESHOLD = 0.782
 
 
 class Transaction(BaseModel):
@@ -48,8 +59,8 @@ def build_features(txn: Transaction) -> np.ndarray:
     h_std = hour_stats["amount_std"].get(str(hour), 1.0) or 1.0
     amount_z = (t.Amount - h_mean) / h_std
 
-    # Velocity features can't be computed without historical context at inference time.
-    # Using 0 as a neutral placeholder — in production this would come from a feature store.
+    # Velocity features require per-card history unavailable at single-transaction inference.
+    # In production these would come from a feature store.
     velocity_count = 0.0
     velocity_amount = 0.0
 
